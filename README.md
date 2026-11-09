@@ -1,5 +1,5 @@
 <h1>
-  <img src="https://raw.githubusercontent.com/CyberSleuth-MS/CUI-Enclave-Dashboard-WIP/main/github-images/basic-svg-icon.png" width="52" height="52" align="center">
+  <img src="https://raw.githubusercontent.com/CyberSleuth-MS/CUI-Enclave-Dashboard-WIP/main/github-images/basic-svg-icon.png" width="44" height="44" align="center">
   Example here after the Image
 </h1>
 
