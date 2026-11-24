@@ -15,3 +15,6 @@ boto3
 fastapi
 pydantic
 ```
+
+# Environment Requirements
+You need to fill out the .env at https://github.com/CyberSleuth-MS/CUI-Enclave-Dashboard-WIP/blob/main/.env on your machine using your AWS SSO Login Profile NAME. It is required for the assess.py scanner
