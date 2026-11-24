@@ -27,7 +27,7 @@ except ImportError:
 SERVER_URL = "http://127.0.0.1:8000"
 VALID_STATUSES = {"pending", "active", "success", "warning", "failure"}
 
-# For Updating The Server
+# For Updating The Phase Details mini-page (Terminals)
 # NOT import asyncio
 import sys, httpx
 TERMINAL_URL = "http://127.0.0.1:8000/api/terminal/output"
