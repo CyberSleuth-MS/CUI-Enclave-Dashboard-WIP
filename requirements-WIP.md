@@ -7,6 +7,7 @@
 ### Direct Download for Windows "MSI installer - Current User Only"
 ### https://awscli.amazonaws.com/AWSCLIV2-User.msi
 
+
 # Python Requirements
 ```
 uvicorn[standard]
