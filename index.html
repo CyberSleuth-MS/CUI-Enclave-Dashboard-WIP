@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compliance Workflow</title>
+<style>
+:root{
+  --squid:#232f3e; --orange:#ff9900;
+  --bg:#f2f3f3; --card:#fff; --line:#d5dbdb; --line-2:#e9ebed;
+  --text:#0f1b2a; --muted:#5f6b7a;
+  --ok:#037f0c; --warn:#8d6605; --warn-bg:#fffce9; --warn-line:#f2d27a;
+  --bad:#d13212; --bad-bg:#fff7f7; --bad-line:#f2a99b;
+  --info:#0972d3; --radius:10px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:"Amazon Ember","Inter","Segoe UI",system-ui,sans-serif;
+  color:var(--text); background:var(--bg);
+  background-image:radial-gradient(#cfd4d9 1px,transparent 1px);
+  background-size:22px 22px; min-height:100vh;
+}
+
+/* ---------- top bar ---------- */
+.topbar{
+  background:var(--squid); color:#fff; height:56px;
+  display:flex; align-items:center; gap:14px; padding:0 24px;
+  border-bottom:3px solid var(--orange); position:sticky; top:0; z-index:20;
+}
+.logo{width:28px;height:28px}
+.topbar h1{font-size:17px;font-weight:600;margin:0;letter-spacing:.2px}
+.crumb{color:#9aa5b1;font-size:14px}
+.spacer{flex:1}
+.live{display:flex;align-items:center;gap:8px;font-size:13px;color:#c5ccd3}
+.dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;animation:ping 2s infinite}
+.dot.off{background:#e55;animation:none}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(46,204,113,.6)}70%{box-shadow:0 0 0 8px rgba(46,204,113,0)}100%{box-shadow:0 0 0 0 rgba(46,204,113,0)}}
+.btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  color: #fff;
+  background: transparent;
+  transition: 0.15s;
+}
+.gap-btn {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 16px;
+    border-radius: 0;
+    border: 2px solid var(--line);
+    color: var(--text);
+    background: transparent;
+    transition: 0.15s;
+    display: flex;
+	align-items: center;
+    justify-content: flex-end;
+    position: relative;
+    margin-left: auto;
+	gap: 8px;
+}
+.gap-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.spinner {
+    animation: spin 0.75s linear infinite;
+}
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+.btn:hover, .gap-btn:hover{
+  background:#fff;
+  color:var(--squid)
+}
+
+/* ---------- page ---------- */
+main{max-width:980px;margin:0 auto;padding:28px 20px 80px}
+.page-head{margin-bottom:20px}
+.page-head h2 {
+    margin: 0 0 4px;
+    font-size: 26px;
+    font-weight: 700;
+    text-align: center;
+    position: relative;
+/*    display: flex;
+    justify-content: flex-start;*/
+}
+.page-head p{margin:0;color:var(--muted);font-size:19px}
+.banner{background:var(--bad-bg);border:1px solid var(--bad-line);color:#8c1d05;border-radius:8px;padding:11px 16px;font-size:14px;margin-bottom:18px}
+.banner[hidden]{display:none}
+.banner code{font-family:var(--mono);font-size:12.5px}
+
+/* ---------- controls summary (small type) ---------- */
+.summary{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 1px 1px rgba(0,28,36,.08);padding:16px 20px 14px;margin-bottom:28px;
+}
+.sum-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px}
+.sum-title,.grp-label{font-size:15px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700}
+.sum-count{font-size:15px;color:var(--muted);font-family:var(--mono)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+/*.chips:empty::before{content:"none yet";font-size:15px;color:#8a95a1;font-family:var(--mono)}*/
+.chip{
+  font-family:var(--mono);font-size:15px;line-height:1;cursor:pointer;
+  padding:5px 8px 5px 22px;border-radius:5px;border:1px solid;position:relative;
+  animation:chipin .45s cubic-bezier(.3,1.5,.5,1);
+}
+.chip::before{content:"";position:absolute;left:8px;top:50%;width:8px;height:4px;margin-top:-4px;
+  border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg)}
+.chips.ok .chip{color:var(--ok);background:#f2fcf3;border-color:#a6dba9}
+.chips.warn .chip{color:var(--warn);background:var(--warn-bg);border-color:var(--warn-line)}
+.chips.bad .chip{color:var(--bad);background:var(--bad-bg);border-color:var(--bad-line)}
+.chips.warn .chip::before,.chips.bad .chip::before{border:0;width:2px;height:8px;margin-top:-4px;background:currentColor;transform:none}
+.chip:hover{filter:brightness(.96)}
+/*@keyframes chipin{from{opacity:0;transform:scale(.6)}}*/
+.chip-group{margin-top:11px;display:flex;gap:10px;align-items:flex-start}
+.chip-group[hidden]{display:none}
+.chip-group .grp-label{padding-top:6px;min-width:100px}
+.overall{margin-top:13px}
+.overall .meta{display:flex;justify-content:space-between;font-size:17px;color:var(--muted);margin-bottom:5px}
+.bar{height:5px;border-radius:99px;background:var(--line-2);overflow:hidden;display:flex}
+.bar>i{display:block;height:100%;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.b-ok{background:#1d8102}.b-warn{background:var(--orange)}.b-bad{background:var(--bad)}
+
+/* ---------- phase card ---------- */
+.flow{display:flex;flex-direction:column;align-items:stretch}
+.card{
+  position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 1px 1px rgba(0,28,36,.08);overflow:hidden;
+  transition:box-shadow .3s,border-color .3s,opacity .3s;
+}
+.card::before,
+.card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: var(--line);
+    transition: background .4s;
+}
+
+.card::before {
+    left: 0;
+}
+
+.card::after {
+    right: 0;
+}
+.card.pending{opacity:.72}
+.card.active{border-color:#ffd18a;box-shadow:0 0 0 3px rgba(255,153,0,.18),0 4px 14px rgba(0,28,36,.1)}
+.card.active::before, .card.active::after{background:var(--orange)}
+.card.success::before, .card.success::after{background:#1d8102}
+.card.warning::before, .card.warning::after{background:var(--orange)}
+.card.failure::before, .card.failure::after{background:var(--bad)}
+.card.warning{border-color:var(--warn-line)} .card.failure{border-color:var(--bad-line)}
+
+.card-head{display:flex;align-items:center;gap:16px;padding:18px 22px 14px 26px}
+.tile{
+  width:46px;height:46px;border-radius:9px;flex:none;display:grid;place-items:center;
+  font-size:23px;color:#fff;background:linear-gradient(135deg,#4d5b6c,#232f3e);
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.2);transition:background .5s;
+}
+.card.active .tile,.card.warning .tile{background:linear-gradient(135deg,#ffb84d,#ec7211)}
+.card.success .tile{background:linear-gradient(135deg,#2ea043,#116329)}
+.card.failure .tile{background:linear-gradient(135deg,#f06a4f,#b02a0c)}
+.titles{flex:1;min-width:0}
+.titles h3{margin:0;font-size:19px;font-weight:700;line-height:1.25}
+.titles .sub{font-size:13px;color:var(--muted);margin-top:2px}
+
+.pill{display:inline-flex;align-items:center;padding:3px 11px;border-radius:99px;font-size:12.5px;font-weight:700;background:var(--line-2);color:var(--muted);white-space:nowrap}
+.pill.active{background:#fff3e0;color:#9a4a00}
+.pill.success{background:#e8f6e9;color:var(--ok)}
+.pill.warning{background:#fff1cc;color:var(--warn)}
+.pill.failure{background:#ffe3de;color:var(--bad)}
+.more{font:inherit;font-size:13px;font-weight:700;color:var(--info);background:none;border:0;cursor:pointer;padding:6px 4px}
+.more:hover{text-decoration:underline}
+
+.progress{height:3px;background:var(--line-2)}
+.progress>i{display:block;height:100%;width:0;background:#1d8102;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.card.warning .progress>i{background:var(--orange)} .card.failure .progress>i{background:var(--bad)}
+
+/* ---------- steps ---------- */
+.steps{list-style:none;margin:0;padding:6px 14px 12px 20px}
+.step{position:relative;border-radius:8px;padding:10px 12px 10px 8px;transition:background .3s}
+.row{display:flex;align-items:center;gap:12px}
+.row .label{flex:1;font-size:19px;line-height:1.35}
+.ctl{font-family:var(--mono);font-size:17px;color:#4b5764;background:#eef0f2;border-radius:4px;padding:2px 6px;flex:none}
+
+/* Tags after the first */
+.control-tags .control-tag + .control-tag {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+}
+
+/* First tag IF more than 1 */
+/*.control-tags .control-tag:first-child {*/
+.control-tags .control-tag:first-child:not(:last-child) {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.control-tag {
+    display: inline-flex;
+    align-items: center;
+    color: var(--control-color);
+    background: color-mix(in srgb, var(--control-color) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--control-color) 35%, transparent);
+    padding: 3px 7px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.row .state{font-size:12.5px;font-weight:700;color:var(--muted);transition:color .3s}
+.step.pending .label{color:var(--muted)}
+.step.active{background:linear-gradient(90deg,#fff7ea,#fff)}
+.step.success .state{color:var(--ok)} .step.warning .state{color:var(--warn)} .step.failure .state{color:var(--bad)}
+.step.active .state{color:#9a4a00}
+.step.active::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--orange),transparent);
+  background-size:40% 100%;background-repeat:no-repeat;animation:scan 1.1s linear infinite;
+}
+@keyframes scan{from{background-position:-40% 0}to{background-position:140% 0}}
+.step.flash{animation:flash 1.4s ease}
+@keyframes flash{0%,60%{background:#e8f1fb}100%{background:transparent}}
+
+.ic{width:24px;height:24px;flex:none}
+.ic svg{width:24px;height:24px;display:block;overflow:visible}
+.ic .ring{fill:none;stroke:#b7c0c8;stroke-width:2}
+.ic .fillc{transform-origin:12px 12px;transform:scale(0);transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
+.ic .mark{fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:30;stroke-dashoffset:30;display:none}
+.ic .spin{display:none;fill:none;stroke:var(--orange);stroke-width:2.6;stroke-linecap:round;stroke-dasharray:20 60;transform-origin:12px 12px;animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.step.active .spin{display:block} .step.active .ring{stroke:#ffd9a0}
+.step.success .fillc,.step.warning .fillc,.step.failure .fillc{transform:scale(1)}
+.step.success .fillc{fill:#1d8102}.step.warning .fillc{fill:var(--orange)}.step.failure .fillc{fill:var(--bad)}
+.step.success .m-ok,.step.warning .m-warn,.step.failure .m-bad{display:block;animation:draw .45s .15s ease forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.step.pop .row{animation:pop .5s ease}
+@keyframes pop{30%{transform:translateX(5px)}100%{transform:none}}
+
+.note{margin:8px 0 2px 36px;padding:10px 14px;border-radius:8px;font-size:14px;line-height:1.4;display:none;border:1px solid}
+.step.warning .note:not(:empty){display:block;background:var(--warn-bg);border-color:var(--warn-line);color:#5c4300;animation:slide .35s ease}
+.step.failure .note:not(:empty){display:block;background:var(--bad-bg);border-color:var(--bad-line);color:#8c1d05;animation:slide .35s ease}
+@keyframes slide{from{opacity:0;transform:translateY(-6px)}}
+
+/* ---------- connector between phases ---------- */
+.link{height:44px;position:relative;width:3px;margin:0 auto;background:repeating-linear-gradient(#c3cad1 0 6px,transparent 6px 12px)}
+.link::after{content:"";position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#c3cad1;border-bottom:0}
+.link i{position:absolute;inset:0;background:#1d8102;transform-origin:top;transform:scaleY(0);transition:transform .9s ease}
+.link.flow-ok i{transform:scaleY(1)} .link.flow-warn i{background:var(--orange);transform:scaleY(1)} .link.flow-bad i{background:var(--bad);transform:scaleY(1)}
+.link b{position:absolute;left:50%;top:0;width:9px;height:9px;margin-left:-4px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px var(--orange),0 0 10px var(--orange);opacity:0}
+.link.flow-ok b,.link.flow-warn b,.link.flow-bad b{animation:travel 1.6s ease-in-out infinite}
+@keyframes travel{0%{top:0;opacity:0}20%{opacity:1}80%{opacity:1}100%{top:100%;opacity:0}}
+
+/* ---------- drawer ---------- */
+.scrim{position:fixed;inset:0;background:rgba(15,27,42,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:40}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(760px,100vw);background:#fff;z-index:50;
+  transform:translateX(102%);transition:transform .35s cubic-bezier(.2,.8,.2,1);
+  display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.25);
+}
+.drawer.on{transform:none}
+.drawer header{
+  min-height:92px;padding:16px 22px;color:#fff;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  background:var(--squid) center/cover;
+}
+.drawer header h3{margin:0;font-size:20px}
+.drawer iframe{flex:1;border:0;width:100%}
+.drawer .empty{padding:40px;color:var(--muted);text-align:center}
+.x{background:rgba(255,255,255,.15);border:0;color:#fff;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer}
+.x:hover{background:rgba(255,255,255,.3)}
+.empty-state{padding:60px 20px;text-align:center;color:var(--muted)}
+
+@media (max-width:640px){ .card-head{flex-wrap:wrap} .crumb{display:none} .chip-group{flex-direction:column;gap:4px} }
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <svg class="logo" viewBox="0 0 32 32" fill="none"><path d="M16 2 28 9v14L16 30 4 23V9z" fill="#ff9900"/><path d="M16 2 28 9l-12 7L4 9z" fill="#ffc266"/><path d="M16 16v14L4 23V9z" fill="#ec7211"/></svg>
+  <h1>Compliance Workflow</h1>
+  <span class="crumb">/ Security Assessment</span>
+  <span class="spacer"></span>
+  <span class="live"><span class="dot off" id="dot"></span><span id="liveText">Connecting…</span></span>
+  <button class="btn" id="theme-toggle">Toggle Dark Mode</button>
+  <button class="btn" id="replay">Replay</button>
+  <style>
+  body.dark-mode {
+	--bg: #121212;
+	--card: #000;
+	--text-color: #f5f5f5;
+	--text: #f5f5f5;
+	--muted: #948f8f;
+	--warn-bg: #BA8E23;
+  }
+  </style>
+  <script>
+	function syncTheme() {
+		const isDark = document.body.classList.contains("dark-mode");
+
+		document.querySelectorAll("iframe#dFrame").forEach(iframe => {
+			iframe.contentWindow.postMessage({
+				theme: isDark ? "dark" : "light"
+			}, "*");
+		});
+	}
+
+	document.getElementById("theme-toggle").addEventListener("click", () => {
+		document.body.classList.toggle("dark-mode");
+		syncTheme();
+	});
+  </script>
+</div>
+
+<main>
+  <div class="page-head">
+    <h2>Security Compliance Dashboard</h2>
+    <!--<p>This page updates itself in real-time when triggering a workflow update with Python.</p>-->
+	<button class="gap-btn" id="gap-report-btn" onclick="openGapReport()" disabled>
+		Gap Report 
+		<span id="gap-report-icon">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="14"
+				height="14"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round">
+				<path d="M15 3h6v6" />
+				<path d="M10 14 21 3" />
+				<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+			</svg>
+		</span>
+	</button>
+  </div>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="summary">
+    <div class="sum-head">
+      <span class="sum-title">Security Controls Overview</span>
+      <span class="sum-count" id="sumCount"></span>
+    </div>
+    <div class="chips ok" id="chipsOk"></div>
+    <div class="chip-group" id="grpWarn" hidden><span class="grp-label">Needs attention</span><div class="chips warn" id="chipsWarn"></div></div>
+    <div class="chip-group" id="grpBad" hidden><span class="grp-label">Failed</span><div class="chips bad" id="chipsBad"></div></div>
+    <div class="overall">
+      <div class="meta"><span id="sumMeta"></span><span id="sumPct">0%</span></div>
+      <div class="bar"><i class="b-ok" id="bOk"></i><i class="b-warn" id="bWarn"></i><i class="b-bad" id="bBad"></i></div>
+    </div>
+  </section>
+
+  <div class="flow" id="flow"></div>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <header id="dHead"><h3 id="dTitle"></h3><button class="x" id="dClose" aria-label="Close">✕</button></header>
+  <div class="empty" id="dEmpty" style="display:none">No detail page is configured for this phase.</div>
+  <iframe id="dFrame" title="Phase detail"></iframe>
+</aside>
+
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const assetUrl = p => !p ? "" : (/^(https?:)?\//.test(p) ? p : "/assets/" + p);
+
+const API = location.protocol === "file:" ? "http://127.0.0.1:8000" : "";
+const POLL_MS = 1000;
+
+const VALID = new Set(["pending","active","success","warning","failure"]);
+const STATE_TEXT = {pending:"Pending",active:"Evaluating…",success:"Passed",warning:"Attention",failure:"Failed"};
+const PHASE_TEXT = {pending:"Waiting",active:"In progress",success:"Compliant",warning:"Needs attention",failure:"Failed"};
+
+const COLOR_RULES = {
+  "3.1.1": "#7d64e3",
+  "3.1.22": "#269b83",
+  "3.2.1": "#d18b35",
+  "3.3.1": "#368acb"
+};
+
+const CTRL = /\b\d{1,2}\.\d{1,2}\.\d{1,2}\b/g;
+const ctrlsOf = s => [
+  ...String(s.id || "").matchAll(CTRL),
+  ...String(s.label || "").matchAll(CTRL)
+].map(m => m[0]).filter((c, i, a) => a.indexOf(c) === i);
+const ctrlOf = s => ctrlsOf(s)[0] || null;
+
+const cleanLabel = (s, c) => !c ? s.label :
+  (String(s.label).replace(new RegExp("\\[?\\s*" + String(c).replace(/\./g,"\\.") + "\\s*\\]?\\s*[-–:]?\\s*"), "").trim() || s.label);
+const natural = (a,b) => {
+  const x=a.split(".").map(Number), y=b.split(".").map(Number);
+  for(let i=0;i<3;i++){ if(x[i]!==y[i]) return x[i]-y[i]; }
+  return 0;
+};
+
+let workflow = {phases:[], reports:{}};
+let signature = "";
+let replayShown = null;   // only non-null while the Replay animation runs
+
+const key = (p,s) => p.id + "/" + s.id;
+const norm = s => VALID.has(s) ? s : "pending";
+const st = (p,s) => replayShown ? (replayShown[key(p,s)] || "pending") : norm(s.status);
+
+const splitTitle = t => {
+  const m = String(t||"").match(/^\s*(\p{Extended_Pictographic}[\uFE0F\u200D\p{Extended_Pictographic}]*)\s*(.*)$/u);
+  return m ? {icon:m[1], text:m[2]} : {icon:String(t||"?").trim().charAt(0).toUpperCase(), text:String(t||"")};
+};
+
+/*
+function phaseStatus(p){
+  const a = p.steps.map(s => st(p,s));
+  if(!a.length) return "pending";
+  if(a.every(x => x !== "pending" && x !== "active"))
+    return a.includes("failure") ? "failure" : a.includes("warning") ? "warning" : "success";
+  return a.some(x => x !== "pending") ? "active" : "pending";
+}
+*/
+
+// Phase updates take precedent over step updates, might revert, might keep
+function phaseStatus(p){
+  const a = p.steps.map(s => st(p,s));
+  if(!a.length || a.every(x => x === "pending")){
+    return VALID.has(p.status) && !replayShown ? p.status : "pending";
+  }
+  if(a.every(x => x !== "pending" && x !== "active"))
+    return a.includes("failure") ? "failure" : a.includes("warning") ? "warning" : "success";
+  return "active";
+}
+
+/* ---------- build DOM: ONLY when phase/step IDs change ---------- */
+const structureOf = wf => JSON.stringify(wf.phases.map(p => [p.id, p.steps.map(s => s.id)]));
+
+function build(){
+  const flow = $("#flow");
+  if(!workflow.phases.length){
+    flow.innerHTML = '<div class="empty-state">No phases yet. Run assess.py to add some.</div>';
+    return;
+  }
+  flow.innerHTML = workflow.phases.map((p,i) => `
+    ${i ? `<div class="link" data-link="${i-1}"><i></i><b></b></div>` : ""}
+    <article class="card pending" data-phase="${esc(p.id)}">
+      <div class="card-head">
+        <div class="tile"></div>
+        <div class="titles"><h3></h3><div class="sub"></div></div>
+        <span class="pill pending"></span>
+        <button class="more">Details ›</button>
+      </div>
+      <div class="progress"><i></i></div>
+      <ul class="steps">
+        ${p.steps.map(s => `
+        <li class="step pending" data-k="${esc(key(p,s))}">
+          <div class="row">
+            <span class="ic"><svg viewBox="0 0 24 24">
+              <circle class="ring" cx="12" cy="12" r="10"/>
+              <circle class="fillc" cx="12" cy="12" r="11"/>
+              <path class="mark m-ok" d="M7 12.5l3.2 3.2L17 9"/>
+              <path class="mark m-warn" d="M12 6.8v6.4M12 17v.2"/>
+              <path class="mark m-bad" d="M8.2 8.2l7.6 7.6M15.8 8.2l-7.6 7.6"/>
+              <circle class="spin" cx="12" cy="12" r="10"/>
+            </svg></span>
+            <span class="label"></span>
+            <span class="state"></span>
+            <span class="control-tags"></span>
+          </div>
+          <div class="note"></div>
+        </li>`).join("")}
+      </ul>
+    </article>`).join("");
+
+  document.querySelectorAll(".card").forEach(c =>
+    c.querySelector(".more").addEventListener("click", e => {
+        e.stopPropagation();
+        openDrawer(c.dataset.phase);
+    })
+  );
+}
+
+/* ---------- chips ---------- */
+function syncChips(el, items){
+  const have = new Map([...el.children].map(c => [c.dataset.k, c]));
+  const want = new Set(items.map(i => i.k));
+  have.forEach((c,k) => { if(!want.has(k)) c.remove(); });
+  items.sort((a,b) => natural(a.c,b.c)).forEach(i => {
+    let c = have.get(i.k);
+    if(!c){
+      c = document.createElement("button");
+      c.className = "chip"; c.dataset.k = i.k;
+      c.onclick = () => focusStep(i.k);
+    }
+    c.textContent = i.c;
+    c.title = i.label;
+    el.appendChild(c);
+  });
+}
+
+function focusStep(k){
+  const li = $(`.step[data-k="${CSS.escape(k)}"]`); if(!li) return;
+  li.scrollIntoView({behavior:"smooth", block:"center"});
+  li.classList.remove("flash"); void li.offsetWidth; li.classList.add("flash");
+}
+
+/* ---------- paint: reads straight from server state ---------- */
+function paint(){
+  let total = 0, ok = 0, warn = 0, bad = 0, ctl = 0;
+  const lists = {success:[], warning:[], failure:[]};
+
+  workflow.phases.forEach((p,i) => {
+    const card = $(`.card[data-phase="${CSS.escape(p.id)}"]`); if(!card) return;
+
+    const t = splitTitle(p.title);
+    card.querySelector(".tile").textContent = t.icon;
+    card.querySelector("h3").textContent = t.text;
+
+    let evald = 0;
+    p.steps.forEach(s => {
+      const v = st(p,s);
+      const li = card.querySelector(`.step[data-k="${CSS.escape(key(p,s))}"]`); if(!li) return;
+
+      const cs = ctrlsOf(s), c = cs[0] || null;
+      if(!li.classList.contains(v)){
+        li.classList.remove("pending","active","success","warning","failure");
+        li.classList.add(v);
+      }
+      li.querySelector(".label").textContent = cleanLabel(s, c);
+      li.querySelector(".state").textContent = STATE_TEXT[v];
+      li.querySelector(".note").textContent = s.message || "";
+      li.querySelector(".control-tags").innerHTML = cs.map(x =>
+        `<span class="control-tag" style="--control-color:${COLOR_RULES[x] || '#888888'}">${esc(x)}</span>`).join("");
+
+      total++;
+      if(c) ctl++;
+      if(v === "success" || v === "warning" || v === "failure") evald++;
+      if(v === "success") ok++; else if(v === "warning") warn++; else if(v === "failure") bad++;
+      if(c && lists[v]) lists[v].push({k:key(p,s), c, label:cleanLabel(s,c)});
+    });
+
+    const ps = phaseStatus(p);
+    card.className = "card " + ps;
+    const pill = card.querySelector(".pill"); pill.className = "pill " + ps; pill.textContent = PHASE_TEXT[ps];
+    card.querySelector(".sub").textContent = `${evald} of ${p.steps.length} checks evaluated`;
+    card.querySelector(".progress i").style.width = (p.steps.length ? evald/p.steps.length*100 : 0) + "%";
+
+    const link = $(`.link[data-link="${i}"]`);
+    if(link){
+      link.classList.remove("flow-ok","flow-warn","flow-bad");
+      if(ps === "success") link.classList.add("flow-ok");
+      else if(ps === "warning") link.classList.add("flow-warn");
+      else if(ps === "failure") link.classList.add("flow-bad");
+    }
+  });
+
+  /* syncChips($("#chipsOk"), lists.success); */
+  syncChips($("#chipsWarn"), lists.warning);
+  syncChips($("#chipsBad"), lists.failure);
+  $("#grpWarn").hidden = !lists.warning.length;
+  $("#grpBad").hidden = !lists.failure.length;
+  /*$("#sumCount").textContent = ctl
+    ? `${lists.success.length} / ${ctl} controls`
+    : (total ? "name step ids like 3.1.1 to list controls here" : "");*/
+
+  const n = total || 1;
+  $("#bOk").style.width = ok/n*100 + "%";
+  $("#bWarn").style.width = warn/n*100 + "%";
+  $("#bBad").style.width = bad/n*100 + "%";
+  $("#sumPct").textContent = Math.round((ok+warn+bad)/n*100) + "%";
+  $("#sumMeta").textContent = `${ok} passed · ${warn} attention · ${bad} failed · ${total-ok-warn-bad} remaining`;
+}
+
+/* ---------- gap report button (uses the same poll, no extra fetch) ---------- */
+function paintGapButton(){
+  const status = (workflow.reports || {})["gap-report"];
+  $("#gap-report-btn").disabled = status !== "done";
+}
+function openGapReport(){ window.open("/api/reports/gap-report.md", "_blank"); }
+
+/* ---------- polling ---------- */
+function ingest(wf){
+  workflow = wf && Array.isArray(wf.phases) ? wf : {phases:[], reports:{}};
+  workflow.phases.forEach(p => { if(!Array.isArray(p.steps)) p.steps = []; });
+  workflow.reports = workflow.reports || {};
+
+  const sig = structureOf(workflow);
+  if(sig !== signature){ signature = sig; build(); }
+  paint();
+  paintGapButton();
+}
+
+function setLive(ok, msg){
+  $("#dot").classList.toggle("off", !ok);
+  $("#liveText").textContent = ok ? "Live" : "Disconnected";
+  const b = $("#banner");
+  if(ok){ b.hidden = true; }
+  else {
+    b.hidden = false;
+    b.innerHTML = `Can't reach <code>${esc(API)}/api/workflow</code> (${esc(msg)}). Is <code>server.py</code> running? Retrying every second…`;
+  }
+}
+
+async function poll(){
+  try{
+    const r = await fetch(API + "/api/workflow", {cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    ingest(await r.json());
+    setLive(true);
+  }catch(e){
+    console.error("POLL FAILED:", e);
+    setLive(false, e.message || e);
+  }
+}
+
+/* ---------- replay (visual only, doesn't touch the server) ---------- */
+async function replay(){
+  if(replayShown) return;
+  replayShown = {};
+  paint();
+  try{
+    for(const p of workflow.phases){
+      for(const s of p.steps){
+        const k = key(p,s), final = norm(s.status);
+        if(final === "pending") continue;
+        replayShown[k] = "active"; paint(); await sleep(500);
+        replayShown[k] = final;    paint(); await sleep(200);
+      }
+    }
+  } finally {
+    replayShown = null;
+    paint();
+  }
+}
+$("#replay").onclick = replay;
+
+/* ---------- drawer (when clicking "details" its the terminal window from monitor.html, assigned on per-phase basis) ---------- */
+function openDrawer(id) {
+  const p = workflow.phases.find(x => x.id === id);
+  if (!p) return;
+
+  $("#dTitle").textContent = splitTitle(p.title).text;
+
+  const bg = assetUrl(p.background);
+  $("#dHead").style.backgroundImage = bg
+    ? `linear-gradient(180deg,rgba(35,47,62,.55),rgba(22,30,45,.95)), url('${bg}')`
+    : "";
+
+  const f = $("#dFrame");
+
+  if (p.file) {
+    f.style.display = "block";
+    $("#dEmpty").style.display = "none";
+
+    const fileUrl = new URL(assetUrl(p.file), location.href);
+    fileUrl.searchParams.set("phase", id);
+    f.src = fileUrl.toString();
+  } else {
+    f.style.display = "none";
+    f.removeAttribute("src");
+    $("#dEmpty").style.display = "block";
+  }
+
+  $("#drawer").classList.add("on");
+  $("#scrim").classList.add("on");
+}
+
+$("#dFrame").addEventListener("load", syncTheme);
+
+function closeDrawer() {
+  $("#drawer").classList.remove("on");
+  $("#scrim").classList.remove("on");
+  // setTimeout(() => $("#dFrame").removeAttribute("src"), 350);
+}
+
+$("#dClose").onclick = closeDrawer;
+$("#scrim").onclick = closeDrawer;
+
+document.addEventListener("keydown", e => e.key === "Escape" && closeDrawer());
+
+window.addEventListener("message", e => {
+  if (e.data === "close-subgraph") closeDrawer();
+});
+
+poll();
+setInterval(poll, POLL_MS);
+</script>
+</body>
+</html>
