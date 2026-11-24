@@ -1,4 +1,4 @@
-# assess.py which is meant to update server.py
+# assess.py (which is the scanner process meant to update server.py)
 """
 
 Usage:
