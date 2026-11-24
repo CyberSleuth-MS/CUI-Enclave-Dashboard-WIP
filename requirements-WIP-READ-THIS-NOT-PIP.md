@@ -12,4 +12,6 @@ https://awscli.amazonaws.com/AWSCLIV2-User.msi
 ```
 uvicorn[standard]
 boto3
+fastapi
+pydantic
 ```
