@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terminal Monitor</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+    }
+
+    body {
+        color-scheme: light;
+
+        --bg: #f3f5f8;
+        --surface: #ffffff;
+        --border: #d8dee8;
+        --text: #202938;
+        --muted: #687386;
+        --accent: #3478b8;
+        --scrollbar: #c1c9d5;
+
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", sans-serif;
+    }
+
+    body.dark-mode {
+        color-scheme: dark;
+
+        --bg: #101216;
+        --surface: #171a20;
+        --border: #303744;
+        --text: #e1e6ee;
+        --muted: #8993a3;
+        --accent: #82b8e8;
+        --scrollbar: #414b5b;
+    }
+
+    .terminal {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        height: 100%;
+        padding: 12px;
+    }
+
+    .status {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        flex-shrink: 0;
+        min-height: 34px;
+        padding: 8px 12px;
+
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+
+        color: var(--accent);
+        font-family: Consolas, monospace;
+        font-size: 12px;
+    }
+
+    .log-container {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+
+        padding: 14px;
+
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar) transparent;
+    }
+
+    .log {
+        margin: 0;
+        color: var(--text);
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 13px;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    .log-line {
+        min-height: 1.7em;
+    }
+
+    .log-line.error {
+        color: #e05252;
+    }
+
+    .log-line.success {
+        color: #2e9d61;
+    }
+
+    .log-line.muted {
+        color: var(--muted);
+    }
+
+    @media (max-width: 600px) {
+        .terminal {
+            padding: 8px;
+        }
+
+        .log-container {
+            padding: 10px;
+        }
+
+        .log {
+            font-size: 12px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="terminal">
+
+    <div class="status">
+        <svg width="15" height="15" viewBox="0 0 24 24"
+			 fill="none" stroke="currentColor" stroke-width="1.8"
+			 stroke-linecap="round" stroke-linejoin="round">
+			<rect x="3" y="4" width="18" height="16" rx="2"/>
+			<path d="m7 9 3 3-3 3"/>
+			<path d="M13 15h4"/>
+		</svg>
+        <span id="status">Connecting...</span>
+    </div>
+
+    <div class="log-container" id="log-container">
+        <div class="log" id="log"></div>
+    </div>
+
+</div>
+
+<script>
+const terminalId = new URLSearchParams(location.search).get("phase");
+
+if (!terminalId) {
+    throw new Error("Missing terminal ID");
+}
+
+const LOG_PREFIX = `[${terminalId}]`;
+
+const statusElement = document.getElementById("status");
+const logContainer = document.getElementById("log-container");
+const logElement = document.getElementById("log");
+
+function appendLine(text, type = "") {
+    const line = document.createElement("div");
+
+    line.className = `log-line ${type}`;
+    line.textContent = text;
+
+    logElement.appendChild(line);
+
+    // Automatically follow new output.
+    logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+function handleEvent(data) {
+
+    switch (data.type) {
+
+        case "start":
+            logElement.textContent = "";
+            statusElement.textContent =
+                `Running (max ${data.max_iterations} iterations)`;
+
+            appendLine("================================");
+            appendLine("Process started", "success");
+            appendLine("================================");
+            break;
+
+        case "status":
+            statusElement.textContent = data.text;
+            appendLine(data.text);
+            break;
+
+        case "frame":
+            appendLine(data.action);
+            break;
+
+        case "eval":
+            if (data.evaluation) {
+                const evaluation = data.evaluation;
+
+                appendLine(
+                    `[${evaluation.result || "UNKNOWN"}] ${evaluation.reason || ""}`,
+                    evaluation.result === "WORSE" ? "error" :
+                    evaluation.result === "IMPROVED" ? "success" : ""
+                );
+
+                if (evaluation.prediction) {
+                    appendLine(`Next: ${evaluation.prediction}`, "muted");
+                }
+            }
+            break;
+
+        case "note":
+            appendLine(data.text, "error");
+            break;
+
+        case "done":
+            statusElement.textContent = data.error
+                ? `Failed: ${data.error}`
+                : data.passed
+                    ? "Completed successfully"
+                    : "Stopped without matching";
+
+            appendLine("--------------------------------");
+
+            appendLine(
+                data.error
+                    ? `ERROR: ${data.error}`
+                    : data.passed
+                        ? `Completed successfully (${data.iterations} iterations)`
+                        : `Stopped after ${data.iterations} iterations`,
+                data.error || !data.passed ? "error" : "success"
+            );
+
+            break;
+    }
+}
+
+function handleLogLine(line) {
+
+    if (!line.startsWith(LOG_PREFIX)) {
+        return;
+    }
+
+    const content = line
+        .slice(LOG_PREFIX.length)
+        .trimStart();
+
+    try {
+        const data = JSON.parse(content);
+        handleEvent(data);
+
+    } catch (error) {
+        appendLine(content);
+    }
+}
+
+window.addEventListener("message", event => {
+    if (event.data?.theme === "dark") {
+        document.body.classList.add("dark-mode");
+    }
+
+    if (event.data?.theme === "light") {
+        document.body.classList.remove("dark-mode");
+    }
+});
+
+const socket = new WebSocket(
+    `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws/terminal/${encodeURIComponent(terminalId)}`
+);
+
+socket.addEventListener("open", () => {
+    statusElement.textContent = `Connected: ${terminalId}`;
+    appendLine(`Connected to terminal: ${terminalId}`, "success");
+});
+
+socket.addEventListener("message", event => {
+    handleLogLine(event.data);
+});
+
+socket.addEventListener("error", () => {
+    statusElement.textContent = "WebSocket connection error";
+    appendLine("WebSocket connection error", "error");
+});
+
+socket.addEventListener("close", () => {
+    statusElement.textContent = `Disconnected: ${terminalId}`;
+    appendLine("Disconnected from terminal", "muted");
+});
+
+</script>
+</body>
+</html>
