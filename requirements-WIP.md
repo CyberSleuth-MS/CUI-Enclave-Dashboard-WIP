@@ -1,0 +1,6 @@
+
+
+# Python Requirements
+```
+uvicorn[standard]
+```
